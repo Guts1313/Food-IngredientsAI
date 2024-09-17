@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "732861767742",
+    "project_id": "notacookbook-400f2",
+    "storage_bucket": "notacookbook-400f2.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:732861767742:android:fef8a188c074477384316f",
+        "android_client_info": {
+          "package_name": "com.example.test2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCqnOpotG5UunSGPPtxIWkbhpXA5QhcGvA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
