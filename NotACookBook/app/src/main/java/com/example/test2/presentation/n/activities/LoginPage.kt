@@ -5,6 +5,7 @@ import android.graphics.ImageDecoder
 import android.graphics.drawable.AnimatedImageDrawable
 import android.net.Uri
 import android.os.Build
+import android.util.Log
 import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
@@ -97,14 +98,17 @@ fun GlassMorphismLoginPage(navController: NavController) {
                 password = password,  // Pass the state down
                 onPasswordChange = { password = it },  // Pass a lambda to update the state
                 loginError = loginError,
-                onLogin = { email, pass ->  // Accepts two parameters, email and password
+                onLogin = { email, pass ->
                     // Firebase authentication for login
                     auth.signInWithEmailAndPassword(email, pass)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                                // Navigate to another screen (dashboard, home, etc.) after successful login
-                                // navController.navigate("home")
+                                Log.d("Login", "Navigating to recipe list")
+                                // Navigate to the recipe list screen upon successful login
+                                navController.navigate("recipe_list") {
+                                    popUpTo("login") { inclusive = true } // Remove login from the back stack
+                                }
                             } else {
                                 loginError = task.exception?.localizedMessage ?: "Login failed"
                             }
@@ -114,6 +118,7 @@ fun GlassMorphismLoginPage(navController: NavController) {
         }
     }
 }
+
 
 
 

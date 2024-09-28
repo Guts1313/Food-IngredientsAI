@@ -10,7 +10,9 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.google.gms:google-services:4.3.15") // Add Google Services plugin
+        classpath("com.android.tools.build:gradle:8.1.2") // Ensure latest Gradle plugin version
+        classpath("com.google.gms:google-services:4.3.15") // Google Services plugin
+        classpath("com.google.dagger:hilt-android-gradle-plugin:2.48") // Latest Hilt Gradle plugin
     }
 }
 

@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -38,10 +39,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.TextUnitType
 import androidx.compose.ui.unit.dp
+import com.example.test2.domain.RecipeViewModel
 import com.example.test2.presentation.n.activities.MainScreen
 import com.google.firebase.analytics.FirebaseAnalytics
+import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.HiltAndroidApp
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     private lateinit var firebaseAnalytics: FirebaseAnalytics
 
@@ -50,9 +54,11 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MainScreen() // Entry point to the app with navigation
+            val recipeViewModel: RecipeViewModel by viewModels()
 
+            MainScreen(viewModel = recipeViewModel) // Entry point to the app with navigation
         }
+
         firebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
         // Log an event to check if Firebase is working
@@ -62,9 +68,9 @@ class MainActivity : ComponentActivity() {
             putString(FirebaseAnalytics.Param.CONTENT_TYPE, "test_content")
         }
         firebaseAnalytics.logEvent(FirebaseAnalytics.Event.SELECT_CONTENT, bundle)
-
     }
 }
+
 
 //@Composable
 //fun chipSection(chips: List<String>) {
