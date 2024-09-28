@@ -26,4 +26,6 @@ object NetworkModule {
     fun provideRecipeService(retrofit: Retrofit): RecipeService {
         return retrofit.create(RecipeService::class.java)
     }
+
+    
 }

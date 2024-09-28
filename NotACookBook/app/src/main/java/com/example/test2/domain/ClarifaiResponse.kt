@@ -1,13 +1,25 @@
 package com.example.test2.domain
 
 data class ClarifaiResponse(
-    val outputs: List<ClarifaiOutput>
+    val status: ClarifaiStatus?,
+    val outputs: List<ClarifaiOutput>?
+)
+
+data class ClarifaiStatus(
+    val code: Int?,
+    val description: String?
 )
 
 data class ClarifaiOutput(
-    val data: List<ClarifaiConcept>
+    val data: ClarifaiData?
+)
+
+data class ClarifaiData(
+    val concepts: List<ClarifaiConcept>?
 )
 
 data class ClarifaiConcept(
-    val name: String
+    val id: String?,
+    val name: String?,
+    val value: Double?
 )
