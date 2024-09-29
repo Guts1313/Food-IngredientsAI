@@ -65,17 +65,15 @@ import com.google.firebase.auth.FirebaseAuth
 @RequiresApi(Build.VERSION_CODES.P)
 @Composable
 fun GlassMorphismLoginPage(navController: NavController) {
-    val auth = FirebaseAuth.getInstance() // Initialize FirebaseAuth instance
-    val context = LocalContext.current // For showing Toasts in the login process
-
+    val auth = FirebaseAuth.getInstance()
+    val context = LocalContext.current
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var loginError by remember { mutableStateOf("") } // To display error messages if login fails
+    var loginError by remember { mutableStateOf("") }
 
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Background GIF Image
         Image(
             painter = rememberDrawablePainter(
                 drawable = LocalContext.current.getDrawable(R.drawable.cooking)
@@ -93,21 +91,18 @@ fun GlassMorphismLoginPage(navController: NavController) {
         ) {
             GlassMorphismCard(
                 navController = navController,
-                username = username,  // Pass the state down
-                onUsernameChange = { username = it },  // Pass a lambda to update the state
-                password = password,  // Pass the state down
-                onPasswordChange = { password = it },  // Pass a lambda to update the state
+                username = username,
+                onUsernameChange = { username = it },
+                password = password,
+                onPasswordChange = { password = it },
                 loginError = loginError,
                 onLogin = { email, pass ->
-                    // Firebase authentication for login
                     auth.signInWithEmailAndPassword(email, pass)
                         .addOnCompleteListener { task ->
                             if (task.isSuccessful) {
                                 Toast.makeText(context, "Login Successful!", Toast.LENGTH_SHORT).show()
-                                Log.d("Login", "Navigating to recipe list")
-                                // Navigate to the recipe list screen upon successful login
-                                navController.navigate("recipe_list") {
-                                    popUpTo("login") { inclusive = true } // Remove login from the back stack
+                                navController.navigate("category_selection") {
+                                    popUpTo("login") { inclusive = true } // Clear login from backstack
                                 }
                             } else {
                                 loginError = task.exception?.localizedMessage ?: "Login failed"
@@ -118,6 +113,7 @@ fun GlassMorphismLoginPage(navController: NavController) {
         }
     }
 }
+
 
 
 

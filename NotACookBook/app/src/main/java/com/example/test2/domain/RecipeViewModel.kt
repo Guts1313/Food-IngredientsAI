@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.example.test2.data.Ingredient
 import com.example.test2.data.Recipe
 import com.example.test2.data.RecipeRepository
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
@@ -24,8 +26,12 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecipeViewModel @Inject constructor(
-    private val recipeRepository: RecipeRepository
+    private val recipeRepository: RecipeRepository,
+    val firebaseFirestore: FirebaseFirestore // Add Firebase Firestore for saving the recipe
 ) : ViewModel() {
+
+    private val _savedRecipes = MutableLiveData<List<RecipeDetailsResponse>>() // Holds the saved recipes
+    val savedRecipes: LiveData<List<RecipeDetailsResponse>> get() = _savedRecipes
 
     private val _recipes = MutableLiveData<List<Recipe>>()
     val recipes: LiveData<List<Recipe>> = _recipes
@@ -39,10 +45,40 @@ class RecipeViewModel @Inject constructor(
     private val clarifaiService: ClarifaiService // For analyzing images
 
     private val recipeApiKey = "bc931648c46c46ee922d83058dab5a43"
+
     // Initialization block for setting up Clarifai Retrofit service
     init {
         clarifaiService = setupClarifaiService()
         fetchRecipes(recipeApiKey, "all", 50)
+    }
+    fun fetchSavedRecipes() {
+        firebaseFirestore.collection("myRecipes")
+            .get()
+            .addOnSuccessListener { result ->
+                val recipes = result.map { doc ->
+                    RecipeDetailsResponse(
+                        id = doc.getLong("id")?.toInt() ?: 0,
+                        title = doc.getString("title") ?: "",
+                        image = doc.getString("image") ?: "",
+                        extendedIngredients = (doc.get("ingredients") as? List<HashMap<String, Any>>)?.map { ingredient ->
+                            Ingredient(
+                                id = (ingredient["id"] as? Long)?.toInt() ?: 0,
+                                name = ingredient["name"] as? String ?: "",
+                                amount = (ingredient["amount"] as? Double) ?: 0.0,
+                                unit = ingredient["unit"] as? String ?: ""
+                            )
+                        } ?: emptyList()
+                    )
+                }
+                _savedRecipes.value = recipes
+            }
+
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Error fetching saved recipes", e)
+            }
+    }
+    fun setSelectedRecipe(recipe: RecipeDetailsResponse) {
+        _selectedRecipe.value = recipe
     }
 
     // Function to set up Retrofit and OkHttpClient for Clarifai API
@@ -59,7 +95,7 @@ class RecipeViewModel @Inject constructor(
     }
 
     // Function to fetch recipes using the repository
-     fun fetchRecipes(apiKey: String, query: String, number: Int) {
+    fun fetchRecipes(apiKey: String, query: String, number: Int) {
         viewModelScope.launch {
             try {
                 val fetchedRecipes = recipeRepository.fetchRecipes(apiKey, query, number)
@@ -89,43 +125,79 @@ class RecipeViewModel @Inject constructor(
 
     // Function to analyze image and update ingredients using Clarifai API
     fun analyzeImageAndUpdateIngredients(imageBytes: ByteArray, apiKey: String) {
-        // Convert image to Base64
-        val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP) // Remove any newlines
+        val base64Image = Base64.encodeToString(imageBytes, Base64.NO_WRAP)
 
         val requestBody = """
-            {
-                "inputs": [
-                    {
-                        "data": {
-                            "image": {
-                                "base64": "$base64Image"
-                            }
+        {
+            "inputs": [
+                {
+                    "data": {
+                        "image": {
+                            "base64": "$base64Image"
                         }
                     }
-                ]
-            }
-        """.trimIndent().toRequestBody("application/json".toMediaTypeOrNull())
+                }
+            ]
+        }
+    """.trimIndent().toRequestBody("application/json".toMediaTypeOrNull())
 
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                // Call Clarifai API
                 val response = clarifaiService.analyzeImage("Key $apiKey", requestBody)
 
                 if (response.status?.code == 10000) {
-                    // Extract ingredients from response
-                    Log.d("Clarifai", "Successful image processing: ${response.status?.code}")
-                    val ingredients = response.outputs?.get(0)?.data?.concepts?.mapNotNull { it.name } ?: emptyList()
-                    _ingredients.postValue(ingredients) // Update ingredients LiveData
-                } else {
-                    Log.e("ClarifaiError", "Failed with status code: ${response.status?.code}")
-                    _ingredients.postValue(emptyList())
+                    val analyzedIngredients =
+                        response.outputs?.get(0)?.data?.concepts?.mapNotNull { it.name }
+                            ?: emptyList()
+
+                    // Merge original and analyzed ingredients
+                    _selectedRecipe.value?.let { recipe ->
+                        val allIngredients = recipe.extendedIngredients.map { it.name } + analyzedIngredients
+                        _ingredients.postValue(analyzedIngredients)
+
+                        // Save original + analyzed ingredients to Firebase
+                        val updatedRecipe = recipe.copy(
+                            extendedIngredients = recipe.extendedIngredients + analyzedIngredients.map {
+                                Ingredient(0, it, 1.0, "")
+                            }
+                        )
+                        saveRecipeToFirebase(updatedRecipe)
+                    }
                 }
             } catch (e: Exception) {
                 Log.e("ClarifaiError", "Error analyzing image: ${e.message}")
-                _ingredients.postValue(emptyList()) // Handle failure
             }
         }
     }
+
+
+
+    fun saveRecipeToFirebase(recipe: RecipeDetailsResponse) {
+        val recipeMap = hashMapOf(
+            "title" to recipe.title,
+            "image" to recipe.image,
+            "ingredients" to recipe.extendedIngredients.map { ingredient ->
+                hashMapOf(
+                    "id" to ingredient.id,
+                    "name" to ingredient.name,
+                    "amount" to ingredient.amount,
+                    "unit" to ingredient.unit
+                )
+            }
+        )
+
+        firebaseFirestore.collection("myRecipes")
+            .document(recipe.title)
+            .set(recipeMap)
+            .addOnSuccessListener {
+                Log.d("Firebase", "Recipe successfully saved!")
+            }
+            .addOnFailureListener { e ->
+                Log.e("Firebase", "Error saving recipe", e)
+            }
+    }
+
+
 }
 
 

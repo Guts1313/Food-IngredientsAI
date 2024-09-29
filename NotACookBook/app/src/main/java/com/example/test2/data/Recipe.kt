@@ -5,4 +5,4 @@ data class Recipe(
     val title: String,
     val image: String,
     val ingredients: List<String>? = null // Ensure this is a list of ingredients
-)
+ )

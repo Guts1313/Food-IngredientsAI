@@ -12,27 +12,35 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +53,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -62,13 +72,18 @@ import com.example.test2.domain.RecipeViewModel
 import java.io.ByteArrayOutputStream
 
 @Composable
-fun RecipeListScreen(viewModel: RecipeViewModel = hiltViewModel(), onRecipeClick: (Recipe) -> Unit) {
+fun RecipeListScreen(
+    viewModel: RecipeViewModel = hiltViewModel(),
+    onRecipeClick: (Recipe) -> Unit
+) {
     val recipes by viewModel.recipes.observeAsState(emptyList()) // Observe recipes from ViewModel
-
+    val newApiKey = "e8da20d8077445c0b5755c1eebcdf938"
     // Use LazyVerticalGrid to display recipes in a grid format
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        modifier = Modifier.padding(8.dp)
+        modifier = Modifier
+            .clip(shape = RoundedCornerShape(25.dp))
+            .background(Color(0xFF121212)) // Set black background
     ) {
         // Use the items function to iterate over the recipes list
         items(recipes) { recipe ->
@@ -86,7 +101,8 @@ fun RecipeDetailScreen(
     viewModel: RecipeViewModel,
     recipeId: Int,
     apiKey: String,
-    cameraLauncher: ActivityResultLauncher<Intent>
+    cameraLauncher: ActivityResultLauncher<Intent>,
+    filePickerLauncher: ActivityResultLauncher<String>
 ) {
     // Fetch the recipe details
     LaunchedEffect(recipeId) {
@@ -94,17 +110,18 @@ fun RecipeDetailScreen(
     }
 
     val recipeDetails by viewModel.selectedRecipe.observeAsState()
-    val ingredients by viewModel.ingredients.observeAsState(emptyList())
+    val analyzedIngredients by viewModel.ingredients.observeAsState(emptyList())
     val context = LocalContext.current
 
-    // Separate state to control the expand/collapse behavior for Ingredients and Analyzed Ingredients
+    // State to control the expand/collapse behavior for Ingredients and Analyzed Ingredients
     var isIngredientsExpanded by remember { mutableStateOf(false) }
-    var isAnalyzedIngredientsExpanded by remember { mutableStateOf(false) } // Separate state for Analyzed Ingredients
+    var isAnalyzedIngredientsExpanded by remember { mutableStateOf(false) }
 
     recipeDetails?.let { recipe ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color(0xFF121212))
                 .padding(16.dp)
         ) {
             Column(
@@ -119,6 +136,7 @@ fun RecipeDetailScreen(
                     contentDescription = null,
                     modifier = Modifier
                         .height(250.dp)
+                        .clip(shape = RoundedCornerShape(25.dp))
                         .fillMaxWidth(),
                     contentScale = ContentScale.Crop
                 )
@@ -129,65 +147,56 @@ fun RecipeDetailScreen(
                 Text(
                     text = recipe.title,
                     style = MaterialTheme.typography.headlineMedium,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = Color.White
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Ingredients section header (collapsible)
+                // Ingredients section header (collapsible) (Original Ingredients Only)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .clip(shape = RoundedCornerShape(25.dp))
+                        .background(
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color.DarkGray,
+                                    Color(0xFF121212).copy(0.2f),
+                                    Color.DarkGray.copy(0.5f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
                         .clickable { isIngredientsExpanded = !isIngredientsExpanded }
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "Ingredients:",
-                        style = MaterialTheme.typography.headlineLarge
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White
                     )
                     Icon(
                         imageVector = if (isIngredientsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isIngredientsExpanded) "Collapse" else "Expand"
+                        contentDescription = if (isIngredientsExpanded) "Collapse" else "Expand",
+                        tint = Color.Yellow
                     )
                 }
 
-                // Collapsible ingredients list
+                // Collapsible ingredients list (Show Original Ingredients)
                 if (isIngredientsExpanded) {
                     LazyColumn {
                         items(recipe.extendedIngredients) { ingredient ->
                             Text(
                                 text = "${ingredient.amount} ${ingredient.unit} of ${ingredient.name}",
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(vertical = 4.dp)
+                                modifier = Modifier.padding(vertical = 2.dp),
+                                color = Color.White,
+                                textAlign = TextAlign.End
                             )
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Button to trigger the camera and capture the image
-                Button(onClick = {
-                    val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
-                    cameraLauncher.launch(cameraIntent) // Open the camera
-                }) {
-                    Text(text = "Capture Image")
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // New "Test Analysis" button to use predefined image
-                Button(onClick = {
-                    val imageBytes = captureTestImage(context) // Use the predefined image
-                    if (imageBytes != null) {
-                        val apiKey = "e8da20d8077445c0b5755c1eebcdf938"
-                        viewModel.analyzeImageAndUpdateIngredients(imageBytes, apiKey) // Trigger image analysis
-                    } else {
-                        Toast.makeText(context, "Failed to load test image", Toast.LENGTH_SHORT).show()
-                    }
-                }) {
-                    Text(text = "Test Analysis")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -196,17 +205,31 @@ fun RecipeDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { isAnalyzedIngredientsExpanded = !isAnalyzedIngredientsExpanded } // Use separate state
+                        .clip(shape = RoundedCornerShape(25.dp))
+                        .background(
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color.DarkGray,
+                                    Color(0xFF121212).copy(0.2f),
+                                    Color.DarkGray.copy(0.5f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                        .clickable { isAnalyzedIngredientsExpanded = !isAnalyzedIngredientsExpanded }
                         .padding(vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
                         text = "Analyzed Ingredients:",
-                        style = MaterialTheme.typography.headlineLarge
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Color.White
                     )
                     Icon(
                         imageVector = if (isAnalyzedIngredientsExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (isAnalyzedIngredientsExpanded) "Collapse" else "Expand"
+                        contentDescription = if (isAnalyzedIngredientsExpanded) "Collapse" else "Expand",
+                        tint = Color.Yellow,
+                        modifier = Modifier.padding(top = 9.dp)
                     )
                 }
 
@@ -215,13 +238,109 @@ fun RecipeDetailScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 8.dp)
+                            .padding(top = 5.dp)
+                            .clip(shape = RoundedCornerShape(15.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    listOf(
+                                        Color.DarkGray,
+                                        Color(0xFF121212).copy(0.6f)
+                                    )
+                                )
+                            )
+                            .padding(vertical = 8.dp, horizontal = 4.dp)
                     ) {
-                        items(ingredients) { ingredient ->
+                        items(analyzedIngredients) { ingredient ->
                             Text(
                                 text = ingredient,
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.padding(vertical = 4.dp)
+                                modifier = Modifier.padding(vertical = 4.dp),
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Add buttons at the bottom
+                Column(
+                    modifier = Modifier
+                        .padding(bottom = 24.dp)
+                    , verticalArrangement = Arrangement.Bottom
+                ) {
+                    // SmartDetect Button for camera
+                    Button(
+                        onClick = {
+                            val cameraIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+                            cameraLauncher.launch(cameraIntent) // Open the camera
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .padding(vertical = 8.dp)
+                            .clip(shape = RoundedCornerShape(25.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color.Red, Color.DarkGray)
+                                )
+                            ),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = "Camera Icon",
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "SmartDetect",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Add Detected Button to pick image from file picker
+                    Button(
+                        onClick = {
+                            filePickerLauncher.launch("image/*") // Open the file picker to select an image
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth(0.5f)
+                            .padding(vertical = 8.dp)
+                            .clip(shape = RoundedCornerShape(25.dp))
+                            .background(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(Color.Red, Color.DarkGray)
+                                )
+                            ),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color.Transparent,
+                            contentColor = Color.White
+                        ),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Camera,
+                                contentDescription = "Camera Icon",
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Text(
+                                text = "Select img",
+                                style = MaterialTheme.typography.bodyLarge
                             )
                         }
                     }
@@ -230,17 +349,6 @@ fun RecipeDetailScreen(
         }
     } ?: Text(text = "Loading...", style = MaterialTheme.typography.headlineLarge)
 }
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -272,26 +380,33 @@ fun captureTestImage(context: Context): ByteArray? {
 }
 
 
-
 @Composable
 fun RecipeCard(recipe: Recipe, onRecipeClick: (Recipe) -> Unit) {
     Card(
         modifier = Modifier
-            .padding(8.dp)
+            .background(Color(0xFF121212)) // Set black background
+            .padding(4.dp)
+            .clip(shape = RoundedCornerShape(2.dp))
             .fillMaxWidth()
             .clickable { onRecipeClick(recipe) }, // Call the onRecipeClick lambda on click
-        shape = RoundedCornerShape(8.dp)
+        shape = RoundedCornerShape(2.dp),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(8.dp)
+            modifier = Modifier
+                .clip(shape = RoundedCornerShape(2.dp))
+                .background(Color(0xFF121212)) // Set black background
+
         ) {
             // Recipe image
             Image(
                 painter = rememberImagePainter(data = recipe.image),
                 contentDescription = null,
                 modifier = Modifier
-                    .height(150.dp)
+                    .height(160.dp)
+                    .width(185.dp)
+                    .aspectRatio(1f)
+                    .background(Color(0xFF121212)) // Set black background
                     .fillMaxWidth(),
                 contentScale = ContentScale.Crop
             )
@@ -300,7 +415,9 @@ fun RecipeCard(recipe: Recipe, onRecipeClick: (Recipe) -> Unit) {
                 text = recipe.title,
                 style = MaterialTheme.typography.bodyLarge,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(8.dp)
+                modifier = Modifier.padding(top = 12.dp),
+                color = Color.White,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }

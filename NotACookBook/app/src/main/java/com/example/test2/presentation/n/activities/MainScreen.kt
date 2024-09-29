@@ -8,12 +8,15 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +26,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,7 +47,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -56,23 +67,28 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 @Composable
 fun MainScreen(
     viewModel: RecipeViewModel,
-    cameraLauncher: ActivityResultLauncher<Intent> // Pass the camera launcher
+    cameraLauncher: ActivityResultLauncher<Intent>,
+    filePickerLauncher: ActivityResultLauncher<String> // Add file picker launcher
 ) {
     val navController = rememberNavController()
-
-    // State to hold the selected category
-    var selectedCategory by remember { mutableStateOf("all") }
+    val apiKey = "658fb12f9f3b43aa889e0ae00041fb61"
 
     NavHost(
         navController = navController,
-        startDestination = "category_selection", // Start with the category selection screen
+        startDestination = "login", // Start with the login screen
         modifier = Modifier.fillMaxSize()
     ) {
+        // Define the Login route
+        composable("login") {
+            GlassMorphismLoginPage(navController = navController)
+        }
+
         // Define the Category Selection route
         composable("category_selection") {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.Black)
                     .padding(16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
@@ -80,46 +96,77 @@ fun MainScreen(
                 Text(
                     text = "Choose Recipe Type",
                     style = MaterialTheme.typography.headlineMedium,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
                 )
 
                 // Four-block clickable section
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(shape = RoundedCornerShape(15.dp))
+
+                        .background(Color(0xFF121212)) // Set black background
+                    ,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     CategoryBlock("Desserts", R.drawable.deserts, onClick = {
-                        selectedCategory = "desserts"
-                        viewModel.fetchRecipes("bc931648c46c46ee922d83058dab5a43", selectedCategory, 50)
+                        viewModel.fetchRecipes(apiKey, "desserts", 50)
                     })
                     CategoryBlock("Drinks", R.drawable.drink, onClick = {
-                        selectedCategory = "drinks"
-                        viewModel.fetchRecipes("bc931648c46c46ee922d83058dab5a43", selectedCategory, 50)
+                        viewModel.fetchRecipes(apiKey, "drinks", 50)
                     })
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(shape = RoundedCornerShape(15.dp))
+
+                        .background(Color(0xFF121212)) // Set black background
+
+                    ,
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     CategoryBlock("Main Dishes", R.drawable.maindish, onClick = {
-                        selectedCategory = "main course"
-                        viewModel.fetchRecipes("bc931648c46c46ee922d83058dab5a43", selectedCategory, 50)
+                        viewModel.fetchRecipes(apiKey, "main course", 50)
                     })
                     CategoryBlock("Side Dishes", R.drawable.side, onClick = {
-                        selectedCategory = "side dish"
-                        viewModel.fetchRecipes("bc931648c46c46ee922d83058dab5a43", selectedCategory, 50)
+                        viewModel.fetchRecipes(apiKey, "side dish", 50)
                     })
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick = { navController.navigate("my_recipes") }, // Navigate to MyRecipesScreen
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .padding(vertical = 16.dp)
+                        .clip(shape = RoundedCornerShape(25.dp))
+                        .background(Color(0xFF121312)),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color.Transparent,
+                        contentColor = Color.White
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                ) {
+                    Icon(
+                        contentDescription = "My Recipes",
+                        imageVector = Icons.Default.Bookmark,
+                        tint = Color.Red
+                    )
+                    Text(text = "My Recipes", style = MaterialTheme.typography.bodyLarge)
+                }
 
                 // Once the user selects a category, display the recipe list
                 RecipeListScreen(viewModel = viewModel) { recipe ->
                     navController.navigate("recipe_detail/${recipe.id}")
                 }
+
+
             }
         }
 
@@ -131,12 +178,30 @@ fun MainScreen(
                     viewModel = viewModel,
                     recipeId = recipeId,
                     apiKey = "bc931648c46c46ee922d83058dab5a43",
-                    cameraLauncher = cameraLauncher
+                    cameraLauncher = cameraLauncher,
+                    filePickerLauncher = filePickerLauncher // Pass the file picker launcher
                 )
-            } else {
-                Log.e("Navigation", "Invalid recipeId: $recipeId")
             }
         }
+        // Define the Sign-Up route
+        composable("signup") {
+            // Your sign-up composable logic here
+        }
+
+        composable("recipe_detail_saved") {
+            SavedRecipeDetailScreen(
+                viewModel = viewModel, // Use the selected recipe from the ViewModel
+                cameraLauncher = cameraLauncher,
+                filePickerLauncher = filePickerLauncher
+            )
+        }
+
+        // Define the MyRecipesScreen route
+        composable("my_recipes") {
+            MyRecipesScreen(viewModel = viewModel, navController = navController)
+        }
+
+
     }
 }
 
@@ -159,7 +224,15 @@ fun CategoryBlock(label: String, imageResId: Int, onClick: () -> Unit) {
             contentScale = ContentScale.Crop
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = 23.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
