@@ -80,6 +80,7 @@ dependencies {
     kapt("com.google.dagger:hilt-compiler:2.48")
     implementation("androidx.hilt:hilt-navigation-compose:1.0.0")
     implementation("com.google.android.gms:play-services-vision:20.1.3")
+    implementation("androidx.compose.material:material:1.7.2")
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
